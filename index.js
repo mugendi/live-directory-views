@@ -5,12 +5,13 @@
  * https://opensource.org/licenses/MIT
  */
 
-const path = require('path');
-const fs = require('fs');
-const LiveDirectory = require('live-directory');
-const util = require('util');
-const cons = require('consolidate');
-const pMemoize = require('p-memoize');
+const path = require('path'),
+	fs = require('fs-extra'),
+	LiveDirectory = require('live-directory'),
+	util = require('util'),
+	cons = require('consolidate'),
+	pMemoize = require('p-memoize'),
+	_ = require('lodash');
 
 function is_object(value) {
 	if (!value) return false;
@@ -33,18 +34,16 @@ function middleware(opts = {}) {
 	);
 
 	// ensure cache dir
-	if(
+	if (
 		// has cacheDir
 		opts.cacheDir &&
-		// parent directory exists
-		fs.existsSync(path.dirname(opts.cacheDir)) &&
 		// cache dir is missing
 		!fs.existsSync(opts.cacheDir)
-	){
-		fs.mkdirSync(opts.cacheDir)
+	) {
+		fs.ensureDirSync(opts.cacheDir);
 	}
 
-	console.log(opts.cacheDir);
+	// console.log(opts.cacheDir);
 
 	// make view path
 	// console.log(module.parent.path);
@@ -136,6 +135,33 @@ function middleware(opts = {}) {
 							// post content out
 							.then((html) => {
 								response.status(200).html(html).end();
+
+								return html;
+							})
+							.then((content) => {
+								// if we have been asked to write cache dir
+								if (fs.existsSync(opts.cacheDir)) {
+									let fileName = referer_to_filename(request);
+
+									let filePath = path.join(
+										opts.cacheDir,
+										fileName
+									);
+
+									let lastTemplateCache = fs.existsSync(
+										filePath
+									)
+										? fs.statSync(filePath).mtimeMs
+										: 0;
+
+									// if template has been updated recently...
+									if (
+										template.last_update > lastTemplateCache
+									) {
+										fs.writeFileSync(filePath, content);
+									}
+								}
+								// console.log(resp);
 							})
 							// throw all errors
 							.catch((error) => {
@@ -152,6 +178,10 @@ function middleware(opts = {}) {
 
 		next();
 	};
+}
+
+function referer_to_filename(request) {
+	return _.snakeCase(request.hostname + ' ' + request.path);
 }
 
 module.exports = middleware;
