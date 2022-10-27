@@ -13,6 +13,9 @@ This module acts as a middleware to help render all your templates. To do so:
 
 -   [live-directory](https://www.npmjs.com/package/live-directory) watches the views directory for any file changes.
 -   [p-memoize](https://www.npmjs.com/package/p-memoize) is used to memoize rendering for 1 hour by default (see ttl option below) unless the template changes and/or the data used to render it changes.
+	
+	Note: No memoization is done when `NODE_ENV=='development`, because, why would we? 
+ 
 -   [consolidate](https://www.npmjs.com/package/consolidate) helps with the multi-engine rendering.
 
 Well tested with [hyper-express](https://www.npmjs.com/package/hyper-express) but should in theory work with [express](https://www.npmjs.com/package/express) too. Let me know if it doesn't.

@@ -12,8 +12,6 @@ const util = require('util');
 const cons = require('consolidate');
 const pMemoize = require('p-memoize');
 
-
-
 function is_object(value) {
 	if (!value) return false;
 	return value.toString() === '[object Object]';
@@ -62,18 +60,24 @@ function middleware(opts = {}) {
 		});
 	}
 
-	const memoizedTemplateRender = pMemoize(template_render, {
-		maxAge: opts.ttl,
-		cacheKey: (args) => {
-			// make key using the file content and data passed
-			// This way we memoize the file for as long as:
-			// 1. the contents stay the same
-			// 2. the data used to render it stays the same
-			let key = args[0].content + ' > ' + util.inspect(args[1]);
-			// console.log({key});
-			return key;
-		},
-	});
+	// console.log(process.env.NODE_ENV=='development');
+	// don't memoize on development
+	const memoizedTemplateRender =
+		process.env.NODE_ENV == 'development'
+			? template_render
+			: pMemoize(template_render, {
+					maxAge: opts.ttl,
+					cacheKey: (args) => {
+						// make key using the file content and data passed
+						// This way we memoize the file for as long as:
+						// 1. the contents stay the same
+						// 2. the data used to render it stays the same
+						let key =
+							args[0].content + ' > ' + util.inspect(args[1]);
+						// console.log({key});
+						return key;
+					},
+			  });
 
 	// Create LiveDirectory instance
 	const liveTemplates = new LiveDirectory({
@@ -88,7 +92,7 @@ function middleware(opts = {}) {
 
 	return (request, response, next) => {
 		// add the render function to response
-        // this is the function we use within our routes
+		// this is the function we use within our routes
 		response.render = async function (filePath, data = {}) {
 			// ensure leading slash
 			if (/^\//.test(filePath) === false) {
@@ -102,11 +106,11 @@ function middleware(opts = {}) {
 				// render or throw any errors
 				await template
 					.renderFile(data)
-                    // post content out
+					// post content out
 					.then((html) => {
 						response.status(200).html(html).end();
 					})
-                    // throw all errors
+					// throw all errors
 					.catch((error) => {
 						throw error;
 					});

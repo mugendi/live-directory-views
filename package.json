@@ -1,6 +1,6 @@
 {
   "name": "live-directory-views",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A middleware to manage view rendering using the amazing LiveDirectory module. Built to work with hyper-express",
   "main": "index.js",
   "scripts": {
