@@ -50,11 +50,6 @@ function middleware(opts = {}) {
 	// setup the other important methods
 
 	function template_render(file, data = {}) {
-		if (!is_object(data)) {
-			throw new Error('Arg #2 passed to render() must be an object');
-		}
-		// console.log('Rendering', file.path);
-
 		return templateEngine(file.path, data).catch((error) => {
 			throw error;
 		});
@@ -99,10 +94,17 @@ function middleware(opts = {}) {
 				filePath = '/' + filePath;
 			}
 
+			if (!is_object(data)) {
+				throw new Error('Arg #2 passed to render() must be an object');
+			}
+
 			// try and get file
 			const template = liveTemplates.get(filePath);
 
 			if (template) {
+				// merge data with response.locals
+				data = Object.assign(response.locals || {}, data);
+
 				// render or throw any errors
 				await template
 					.renderFile(data)
