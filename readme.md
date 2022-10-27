@@ -38,7 +38,6 @@ let viewOptions = {
 	ttl: 1000 * 3600,
 	// cache directory for templates
 	// also useful for css minification
-	// Read ->
 	cacheDir: path.resolve(module.parent.path, '.cache'),
 };
 
