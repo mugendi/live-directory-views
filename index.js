@@ -23,9 +23,28 @@ function middleware(opts = {}) {
 	}
 
 	opts = Object.assign(
-		{ engine: 'pug', dir: 'views', ttl: 1000 * 3600 },
+		{
+			engine: 'pug',
+			dir: 'views',
+			ttl: 1000 * 3600,
+			cacheDir: path.resolve(module.parent.path, '.cache'),
+		},
 		opts
 	);
+
+	// ensure cache dir
+	if(
+		// has cacheDir
+		opts.cacheDir &&
+		// parent directory exists
+		fs.existsSync(path.dirname(opts.cacheDir)) &&
+		// cache dir is missing
+		!fs.existsSync(opts.cacheDir)
+	){
+		fs.mkdirSync(opts.cacheDir)
+	}
+
+	console.log(opts.cacheDir);
 
 	// make view path
 	// console.log(module.parent.path);
@@ -98,29 +117,37 @@ function middleware(opts = {}) {
 				throw new Error('Arg #2 passed to render() must be an object');
 			}
 
-			// try and get file
-			const template = liveTemplates.get(filePath);
+			// wait for templates to be ready
+			liveTemplates
+				.ready()
+				.then((resp) => {
+					// console.log(resp);
 
-			if (template) {
-				// merge data with response.locals
-				data = Object.assign(response.locals || {}, data);
+					// try and get file
+					const template = liveTemplates.get(filePath);
 
-				// render or throw any errors
-				await template
-					.renderFile(data)
-					// post content out
-					.then((html) => {
-						response.status(200).html(html).end();
-					})
-					// throw all errors
-					.catch((error) => {
-						throw error;
-					});
-			} else {
-				throw new Error(
-					`Template ${filePath} does not exist in ${viewsDir}`
-				);
-			}
+					if (template) {
+						// merge data with response.locals
+						data = Object.assign(response.locals || {}, data);
+
+						// render or throw any errors
+						template
+							.renderFile(data)
+							// post content out
+							.then((html) => {
+								response.status(200).html(html).end();
+							})
+							// throw all errors
+							.catch((error) => {
+								throw error;
+							});
+					} else {
+						throw new Error(
+							`Template ${filePath} does not exist in ${viewsDir}`
+						);
+					}
+				})
+				.catch(console.error);
 		};
 
 		next();
