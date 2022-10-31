@@ -76,13 +76,19 @@ function middleware(opts = {}) {
 			// add cache param for cache-ing by engines that support it
 			data = Object.assign({ cache: true }, data);
 
-			let cacheKey = md5({ env, file, data });
+			let cacheKey = md5({
+				env,
+				data,
+				path:file.path,
+				modified: fs.statSync(file.path).mtimeMs,
+				devHash: env == 'development' ? Date.now() : '0'
+			});
 
 			// console.log(cacheKey);
 
 			html = await wrap(cacheKey, async function () {
 				try {
-					// console.log("rendering", file.path, data);
+					console.log("rendering", file.path, data);
 					// render view given data
 					html = await templateEngine(file.path, data).catch(
 						(error) => {
