@@ -8,9 +8,10 @@
 const path = require('path'),
 	fs = require('fs-extra'),
 	LiveDirectory = require('live-directory'),
-	util = require('util'),
 	cons = require('consolidate'),
-	pMemoize = require('p-memoize'),
+	minify = require('html-minifier').minify,
+	{ md5 } = require('./lib/utils'),
+	{ wrap } = require('./lib/cache')(),
 	_ = require('lodash');
 
 function is_object(value) {
@@ -67,30 +68,55 @@ function middleware(opts = {}) {
 
 	// setup the other important methods
 
-	function template_render(file, data = {}) {
-		return templateEngine(file.path, data).catch((error) => {
-			throw error;
-		});
-	}
+	async function template_render(file, data = {}) {
+		let html,
+			env = process.env.NODE_ENV;
+		// optimize html
+		try {
+			// add cache param for cache-ing by engines that support it
+			data = Object.assign({ cache: true }, data);
 
-	// console.log(process.env.NODE_ENV=='development');
-	// don't memoize on development
-	const memoizedTemplateRender =
-		process.env.NODE_ENV == 'development'
-			? template_render
-			: pMemoize(template_render, {
-					maxAge: opts.ttl,
-					cacheKey: (args) => {
-						// make key using the file content and data passed
-						// This way we memoize the file for as long as:
-						// 1. the contents stay the same
-						// 2. the data used to render it stays the same
-						let key =
-							args[0].content + ' > ' + util.inspect(args[1]);
-						// console.log({key});
-						return key;
-					},
-			  });
+			let cacheKey = md5({ env, file, data });
+
+			// console.log(cacheKey);
+
+			html = await wrap(cacheKey, async function () {
+				try {
+					// console.log("rendering", file.path, data);
+					// render view given data
+					html = await templateEngine(file.path, data).catch(
+						(error) => {
+							throw error;
+						}
+					);
+
+					// minify html output for non dev modes
+					if (env !== 'development') {
+						let minifyOpts = {
+							collapseWhitespace: true,
+							conservativeCollapse: true,
+							continueOnParseError: false,
+							keepClosingSlash: true,
+							removeComments: true,
+							removeScriptTypeAttributes: true,
+							sortAttributes: true,
+							sortClassName: true,
+						};
+
+						html = minify(html, minifyOpts);
+					}
+
+					return html;
+				} catch (error) {
+					throw error;
+				}
+			});
+		} catch (error) {
+			console.error(error);
+		}
+
+		return html;
+	}
 
 	// Create LiveDirectory instance
 	const liveTemplates = new LiveDirectory({
@@ -100,7 +126,7 @@ function middleware(opts = {}) {
 	// Handle 'reload' event from LiveDirectory so we can add the renderFile function
 	liveTemplates.on('file_reload', (file) => {
 		// bind the memoized render function to ensure we only
-		file.renderFile = memoizedTemplateRender.bind(null, file);
+		file.renderFile = file.renderFile || template_render.bind(null, file);
 	});
 
 	return (request, response, next) => {
