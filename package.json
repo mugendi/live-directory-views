@@ -24,8 +24,9 @@
   "dependencies": {
     "consolidate": "^0.16.0",
     "fs-extra": "^10.1.0",
+    "html-minifier": "^4.0.0",
     "live-directory": "^2.3.2",
     "lodash": "^4.17.21",
-    "p-memoize": "^4.0.4"
+    "lru-cache": "^7.14.0"
   }
 }
