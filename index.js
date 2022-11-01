@@ -65,12 +65,12 @@ function middleware(opts = {}) {
 	}
 
 	const templateEngine = cons[opts.engine];
+	const env = process.env.NODE_ENV;
 
 	// setup the other important methods
 
 	async function template_render(file, data = {}) {
-		let html,
-			env = process.env.NODE_ENV;
+		let html;
 		// optimize html
 		try {
 			// add cache param for cache-ing by engines that support it
@@ -188,7 +188,10 @@ function middleware(opts = {}) {
 
 									// if template has been updated recently...
 									if (
-										template.last_update > lastTemplateCache
+										template.last_update >
+											lastTemplateCache ||
+										// always update on dev mode
+										env == 'development'
 									) {
 										fs.writeFileSync(filePath, content);
 									}
