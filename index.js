@@ -188,10 +188,11 @@ function middleware(opts = {}) {
 
 									// if template has been updated recently...
 									if (
-										template.last_update >
+										content &&
+										(template.last_update >
 											lastTemplateCache ||
-										// always update on dev mode
-										env == 'development'
+											// always update on dev mode
+											env == 'development')
 									) {
 										fs.writeFileSync(filePath, content);
 									}
