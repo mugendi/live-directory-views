@@ -118,7 +118,9 @@ function middleware(opts = {}) {
 				}
 			});
 		} catch (error) {
-			console.error(error);
+			html = `<pre>${error.message}</pre>
+			`
+			console.error(error.message);
 		}
 
 		return html;
